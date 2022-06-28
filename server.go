@@ -11,12 +11,12 @@ import (
 	"sync"
 )
 
-const MagicNumber = 0x3bef5c
-
 type Option struct {
-	MagicNumber int
-	CodecType   codec.Type
+	MagicNumber int        // MagicNumber marks this's a geerpc request
+	CodecType   codec.Type // client may choose different Codec to encode body
 }
+
+const MagicNumber = 0x3bef5c
 
 var DefaultOption = &Option{
 	MagicNumber: MagicNumber,
@@ -46,7 +46,7 @@ func (server *Server) ServerConn(conn io.ReadWriteCloser) {
 	defer func() { _ = conn.Close() }()
 	var opt Option
 	if err := json.NewDecoder(conn).Decode(&opt); err != nil {
-		log.Println("rpc server: Option err:", err)
+		log.Println("rpc server: options error: ", err)
 		return
 	}
 	if opt.MagicNumber != MagicNumber {
@@ -58,7 +58,7 @@ func (server *Server) ServerConn(conn io.ReadWriteCloser) {
 		log.Printf("rpc server: invalid  codec type %s", opt.CodecType)
 		return
 	}
-	server.ServerConn(conn)
+	server.serveCodec(f(conn))
 }
 
 func Accept(lis net.Listener) {

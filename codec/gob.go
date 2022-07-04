@@ -14,7 +14,6 @@ type GobCodec struct {
 	enc  *gob.Encoder
 }
 
-// 不懂:  <28-06-22, yourname> //
 var _ Codec = (*GobCodec)(nil)
 
 func NewGobCodec(conn io.ReadWriteCloser) Codec {

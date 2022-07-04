@@ -109,6 +109,7 @@ func (server *Server) readRequest(cc codec.Codec) (*request, error) {
 		return nil, err
 	}
 	req := &request{h: h}
+	// 反射好好研究下:  <29-06-22, linton.tao> //
 	req.argv = reflect.New(reflect.TypeOf(""))
 	if err = cc.ReadBody(req.argv.Interface()); err != nil {
 		log.Println("rpc server:read argv err:", err)

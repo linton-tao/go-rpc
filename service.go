@@ -1,4 +1,4 @@
-package gaiarpc
+package gorpc
 
 import (
 	"fmt"
@@ -21,9 +21,8 @@ func (m *methodType) NumCalls() uint64 {
 
 func (m *methodType) newArgv() reflect.Value {
 	var argv reflect.Value
-
 	if m.ArgType.Kind() == reflect.Ptr {
-		argv = reflect.New(m.ArgType.Elem())
+		argv = reflect.New((m.ArgType.Elem()))
 	} else {
 		argv = reflect.New(m.ArgType).Elem()
 	}
@@ -54,10 +53,9 @@ func newService(rcvr interface{}) *service {
 	s.name = reflect.Indirect(s.rcvr).Type().Name()
 	s.typ = reflect.TypeOf(rcvr)
 	if !ast.IsExported(s.name) {
-		log.Fatalf("rpc server: %s is not a valid service name", s.name)
+		log.Fatalf("rpc server:%s is not a valid service name", s.name)
 	}
 	s.registerMethods()
-	fmt.Println(s)
 	return s
 }
 
@@ -69,30 +67,36 @@ func (s *service) registerMethods() {
 		if mType.NumIn() != 3 || mType.NumOut() != 1 {
 			continue
 		}
+
 		if mType.Out(0) != reflect.TypeOf((*error)(nil)).Elem() {
 			continue
 		}
-		argType, replyType := mType.In(1), mType.In(2)
-		if !isExportedOrBuiltinType(argType) || !isExportedOrBuiltinType(replyType) {
+
+		ArgType, replyType := mType.In(1), mType.In(2)
+		if !IsExportedOrBuiltinType(ArgType) || !IsExportedOrBuiltinType(replyType) {
 			continue
 		}
 		s.method[method.Name] = &methodType{
 			method:    method,
-			ArgType:   argType,
+			ArgType:   ArgType,
 			ReplyType: replyType,
 		}
+		log.Printf("rpc server:register %s.%s\n", s.name, method.Name)
+
 	}
-}
-func isExportedOrBuiltinType(t reflect.Type) bool {
-	return ast.IsExported(t.Name()) || t.PkgPath() == ""
 }
 
 func (s *service) call(m *methodType, argv, replyv reflect.Value) error {
 	atomic.AddUint64(&m.numCalls, 1)
 	f := m.method.Func
+	fmt.Println("222222222", argv.Type().Name(), replyv, s.rcvr.Kind())
 	returnValues := f.Call([]reflect.Value{s.rcvr, argv, replyv})
 	if errInter := returnValues[0].Interface(); errInter != nil {
 		return errInter.(error)
 	}
 	return nil
+}
+
+func IsExportedOrBuiltinType(t reflect.Type) bool {
+	return ast.IsExported(t.Name()) || t.PkgPath() == ""
 }
